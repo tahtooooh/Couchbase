@@ -3,110 +3,57 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Couchbase CRUD Manager</title>
+  <title>Couchbase - Movie Database</title>
   <link rel="stylesheet" href="/public/css/styles.css">
 </head>
 <body>
-  <div class="sidebar">
-    <div class="sidebar-header">
-      <h2>Couchbase Manager</h2>
-    </div>
-    <div class="sidebar-content">
-      <div class="form-group">
-        <label for="bucketSelect">Bucket</label>
-        <select id="bucketSelect"></select>
-      </div>
-      <div class="form-group">
-        <label for="scopeSelect">Scope</label>
-        <select id="scopeSelect">
-          <option value="_default">_default</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="collectionSelect">Collection</label>
-        <select id="collectionSelect"></select>
-      </div>
-      <button id="refreshCollections" class="btn btn-secondary">Refresh Collections</button>
-    </div>
-  </div>
-
   <div class="main-content">
     <header class="top-bar">
-      <h1>Document Manager</h1>
+      <h1>Couchbase</h1>
       <div class="top-bar-actions">
-        <button id="addNewBtn" class="btn btn-primary">+ New Document</button>
+        <button id="addNewBtn" class="btn btn-primary">+ Add Movie</button>
       </div>
     </header>
 
-    <div class="toolbar">
-      <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Search documents by ID or content...">
-        <button id="searchBtn" class="btn btn-secondary">Search</button>
-      </div>
-      <div class="query-box">
-        <input type="text" id="n1qlInput" placeholder="Filter: SELECT * WHERE type = 'user' or type = 'product'">
-        <button id="queryBtn" class="btn btn-secondary">Run Query</button>
-      </div>
-    </div>
-
     <div class="status-bar" id="statusBar"></div>
 
-    <div class="documents-container">
-      <table id="documentsTable">
-        <thead>
-          <tr>
-            <th>Document ID</th>
-            <th>Type</th>
-            <th>Content Preview</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="documentsBody">
-          <tr>
-            <td colspan="4" class="empty-state">Load documents to get started</td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="movies-container">
+      <div class="grid" id="moviesGrid"></div>
     </div>
   </div>
 
-  <div class="modal" id="documentModal">
+  <div class="modal" id="movieModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 id="modalTitle">Create Document</h2>
+        <h2 id="modalTitle">Add Movie</h2>
         <button class="close-btn" id="closeModal">&times;</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label for="docId">Document ID</label>
-          <input type="text" id="docId" placeholder="Leave empty for auto-generated ID">
+          <label for="movieTitle">Title</label>
+          <input type="text" id="movieTitle" placeholder="Movie title">
         </div>
         <div class="form-group">
-          <label for="docContent">Document Content (JSON)</label>
-          <textarea id="docContent" rows="12" placeholder='{"key": "value"}'></textarea>
-          <span class="hint">Enter valid JSON for the document content</span>
+          <label for="releaseYear">Release Year</label>
+          <input type="number" id="releaseYear" placeholder="e.g. 2024" min="1900" max="2030">
+        </div>
+        <div class="form-group">
+          <label>Poster Image</label>
+          <div class="image-upload-area">
+            <div class="image-preview" id="imagePreview">
+              <span class="placeholder">No image</span>
+              <img id="previewImg" src="" alt="" style="display: none;">
+            </div>
+            <div class="upload-actions">
+              <label class="btn btn-secondary" for="imageInput">Choose Image</label>
+              <input type="file" id="imageInput" accept="image/*" style="display: none;">
+              <button type="button" id="removeImageBtn" class="btn btn-danger" style="display: none;">Remove</button>
+            </div>
+          </div>
         </div>
         <div class="modal-actions">
           <button id="cancelBtn" class="btn btn-secondary">Cancel</button>
-          <button id="saveBtn" class="btn btn-primary">Save Document</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal" id="viewModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>View Document</h2>
-        <button class="close-btn" id="closeViewModal">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="document-view">
-          <div class="doc-id-display">ID: <span id="viewDocId"></span></div>
-          <pre id="viewDocContent"></pre>
-        </div>
-        <div class="modal-actions">
-          <button id="closeViewBtn" class="btn btn-secondary">Close</button>
+          <button id="saveBtn" class="btn btn-primary">Save</button>
         </div>
       </div>
     </div>
@@ -119,8 +66,8 @@
         <button class="close-btn" id="closeDeleteModal">&times;</button>
       </div>
       <div class="modal-body">
-        <p>Are you sure you want to delete document <strong id="deleteDocId"></strong>?</p>
-        <p class="warning">This action cannot be undone.</p>
+        <p>Delete <strong id="deleteMovieTitle"></strong>?</p>
+        <p class="warning">This cannot be undone.</p>
         <div class="modal-actions">
           <button id="cancelDeleteBtn" class="btn btn-secondary">Cancel</button>
           <button id="confirmDeleteBtn" class="btn btn-danger">Delete</button>

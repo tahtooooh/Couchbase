@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, send_from_directory
 from couchbase.cluster import Cluster
 from couchbase.auth import PasswordAuthenticator
 from couchbase.options import ClusterOptions
@@ -10,6 +10,8 @@ import re
 import json
 import urllib.request
 import urllib.parse
+from werkzeug.utils import secure_filename
+import base64
 
 load_dotenv()
 
@@ -153,5 +155,81 @@ def delete_document(doc_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/upload-image', methods=['POST'])
+def upload_image():
+    try:
+        data = request.json
+        image_data = data.get('image')
+        filename = data.get('filename', 'poster')
+
+        if not image_data:
+            return jsonify({'error': 'No image data provided'}), 400
+
+        if ',' in image_data:
+            header, image_data = image_data.split(',', 1)
+
+        image_bytes = base64.b64decode(image_data)
+
+        safe_name = secure_filename(filename)
+        if not safe_name:
+            safe_name = f"poster_{int(time.time())}"
+
+        ext = '.png'
+        if 'jpeg' in header.lower() or 'jpg' in safe_name.lower():
+            ext = '.jpg'
+        elif 'png' in header.lower() or 'png' in safe_name.lower():
+            ext = '.png'
+        elif 'webp' in header.lower():
+            ext = '.webp'
+
+        filename = f"{safe_name}{ext}"
+        filepath = os.path.join('public', 'images', filename)
+
+        with open(filepath, 'wb') as f:
+            f.write(image_bytes)
+
+        image_url = f"/public/images/{filename}"
+        return jsonify({'url': image_url, 'filename': filename})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/images', methods=['GET'])
+def list_images():
+    try:
+        images_dir = os.path.join('public', 'images')
+        if not os.path.exists(images_dir):
+            return jsonify([])
+
+        files = os.listdir(images_dir)
+        images = []
+        for f in files:
+            if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.gif')):
+                filepath = os.path.join(images_dir, f)
+                size = os.path.getsize(filepath)
+                images.append({
+                    'filename': f,
+                    'url': f"/public/images/{f}",
+                    'size': size,
+                    'sizeFormatted': f"{size / 1024:.1f} KB"
+                })
+        return jsonify(sorted(images, key=lambda x: x['filename']))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/images/<filename>', methods=['DELETE'])
+def delete_image(filename):
+    try:
+        safe_name = secure_filename(filename)
+        filepath = os.path.join('public', 'images', safe_name)
+
+        if not os.path.exists(filepath):
+            return jsonify({'error': 'Image not found'}), 404
+
+        os.remove(filepath)
+        return jsonify({'message': 'Image deleted successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
+    os.makedirs(os.path.join('public', 'images'), exist_ok=True)
     app.run(debug=True, port=5000)
